@@ -28,13 +28,13 @@ class Win32Window {
   Win32Window();
   virtual ~Win32Window();
 
-  // Creates a win32 window with |title| that is positioned and sized using
-  // |origin| and |size|. New windows are created on the default monitor. Window
-  // sizes are specified to the OS in physical pixels, hence to ensure a
-  // consistent size this function will scale the inputted width and height as
-  // as appropriate for the default monitor. The window is invisible until
-  // |Show| is called. Returns true if the window was created successfully.
+  // 使用 |title| 创建一个 win32 窗口，窗口位置由 |origin| 指定，内容区尺寸由
+  // |size| 指定。新窗口会创建在默认显示器上。尺寸使用逻辑内容区尺寸，并根据默认
+  // 显示器缩放。窗口在调用 |Show| 前不可见。创建成功时返回 true。
   bool Create(const std::wstring& title, const Point& origin, const Size& size);
+
+  // 设置系统允许的最小逻辑内容区尺寸。
+  void SetMinimumSize(const Size& size);
 
   // Show the current window. Returns true if the window was successfully shown.
   bool Show();
@@ -91,6 +91,8 @@ class Win32Window {
   static void UpdateTheme(HWND const window);
 
   bool quit_on_close_ = false;
+
+  Size minimum_size_ = Size(0, 0);
 
   // window handle for top level window.
   HWND window_handle_ = nullptr;

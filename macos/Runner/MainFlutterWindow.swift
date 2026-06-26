@@ -1,12 +1,15 @@
 import Cocoa
 import FlutterMacOS
 
+private let storyWindowContentSize = NSSize(width: 768, height: 470)
+
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
-    let windowFrame = self.frame
     self.contentViewController = flutterViewController
-    self.setFrame(windowFrame, display: true)
+    self.contentMinSize = storyWindowContentSize
+    self.setContentSize(storyWindowContentSize)
+    self.center()
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
