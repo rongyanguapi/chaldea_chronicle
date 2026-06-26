@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter 状态管理"
+  short_description: "组织 Flutter 状态持有者、重建范围和异步状态流"
+  default_prompt: "使用 $flutter-state-management 更新这个 ViewModel。"

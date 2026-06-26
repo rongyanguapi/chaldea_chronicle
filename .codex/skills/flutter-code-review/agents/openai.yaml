@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter 代码审查"
+  short_description: "审查 Flutter 代码质量、稳定性和测试覆盖风险"
+  default_prompt: "使用 $flutter-code-review 审查当前 Flutter 变更。"

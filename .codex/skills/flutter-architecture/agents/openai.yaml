@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter 架构"
+  short_description: "规划 Flutter 功能分层、职责边界和模块结构"
+  default_prompt: "使用 $flutter-architecture 规划这个 Flutter 功能。"

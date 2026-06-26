@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter Widget 构建"
+  short_description: "保持 Flutter build 方法纯净、可读和易于重建"
+  default_prompt: "使用 $flutter-widget-build 编写这个 widget。"

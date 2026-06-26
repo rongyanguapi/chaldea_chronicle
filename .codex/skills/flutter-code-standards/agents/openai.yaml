@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter 代码规范"
+  short_description: "编写命名清晰、结构稳定、可持续维护的 Dart 代码"
+  default_prompt: "使用 $flutter-code-standards 修改这段 Dart 代码。"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter Widget 树"
+  short_description: "组织 Flutter 条件渲染、key、列表项和稳定子树"
+  default_prompt: "使用 $flutter-widget-tree 组织这个 UI 树。"

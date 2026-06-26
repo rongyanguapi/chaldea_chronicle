@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter UI 资源"
+  short_description: "管理 Flutter asset、文案、本地化、主题和图标资源"
+  default_prompt: "使用 $flutter-ui-resources 构建这个 Flutter UI。"

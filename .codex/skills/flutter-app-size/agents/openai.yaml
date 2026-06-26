@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter 包体积"
+  short_description: "测量和减少 Flutter release 产物、资源和依赖体积"
+  default_prompt: "使用 $flutter-app-size 分析这个 Flutter 包体积。"

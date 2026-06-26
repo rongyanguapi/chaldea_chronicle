@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter 并发"
+  short_description: "设计 Flutter 后台任务、isolate 和重计算流程"
+  default_prompt: "使用 $flutter-concurrency 设计这个后台任务。"

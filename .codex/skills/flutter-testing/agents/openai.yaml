@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter 测试"
+  short_description: "添加 Flutter 单元测试、widget 测试和回归覆盖"
+  default_prompt: "使用 $flutter-testing 测试这个 Flutter 行为。"

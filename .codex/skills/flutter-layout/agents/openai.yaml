@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter 布局"
+  short_description: "构建和调试 Flutter 约束、滚动和响应式布局"
+  default_prompt: "使用 $flutter-layout 修复这个 Flutter 布局。"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter 性能"
+  short_description: "减少 Flutter 重建、内存泄漏、卡顿和渲染成本"
+  default_prompt: "使用 $flutter-performance 优化这个 Flutter 页面。"
