@@ -3,12 +3,16 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 
 import '../domain/story_chapter.dart';
+import '../helpers/story_cache_helper.dart';
 
 class StoryAudioController {
   StoryAudioController({
+    required StoryCacheHelper cacheHelper,
     AudioPlayer? bgmPlayer,
-  }) : _bgmPlayer = bgmPlayer ?? AudioPlayer();
+  })  : _cacheHelper = cacheHelper,
+        _bgmPlayer = bgmPlayer ?? AudioPlayer();
 
+  final StoryCacheHelper _cacheHelper;
   final AudioPlayer _bgmPlayer;
   final Set<AudioPlayer> _soundEffectPlayers = <AudioPlayer>{};
   String? _currentBgmId;
@@ -33,18 +37,22 @@ class StoryAudioController {
     _currentBgmId = cue?.id;
     try {
       await _bgmPlayer.stop();
-      if (cue?.url == null) {
+      final sourceLocation = await _cacheHelper.resolveAudioSource(
+        cue?.resource,
+      );
+      if (_isDisposed || sourceLocation == null) {
         return;
       }
       await _bgmPlayer.setReleaseMode(ReleaseMode.loop);
-      await _bgmPlayer.play(UrlSource(cue!.url.toString()));
+      await _bgmPlayer.play(_audioSource(sourceLocation));
     } catch (error) {
       _ignoreAudioError(error);
     }
   }
 
   Future<void> _playSoundEffect(StoryAudioCue cue) async {
-    if (cue.url == null) {
+    final sourceLocation = await _cacheHelper.resolveAudioSource(cue.resource);
+    if (_isDisposed || sourceLocation == null) {
       return;
     }
 
@@ -57,11 +65,21 @@ class StoryAudioController {
     );
 
     try {
-      await player.play(UrlSource(cue.url.toString()));
+      await player.play(_audioSource(sourceLocation));
     } catch (error) {
       _ignoreAudioError(error);
       unawaited(_disposeSoundEffectPlayer(player));
     }
+  }
+
+  Source _audioSource(StoryAudioSourceLocation location) {
+    final localFilePath = location.localFilePath;
+    if (localFilePath != null) {
+      return DeviceFileSource(localFilePath);
+    }
+
+    final remoteUrl = location.remoteUrl;
+    return UrlSource(remoteUrl!.toString());
   }
 
   Future<void> _disposeSoundEffectPlayer(AudioPlayer player) async {

@@ -26,7 +26,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
-  Win32Window::Size size(768, 470);
+  Win32Window::Size size(640, 360);
   window.SetMinimumSize(size);
   if (!window.Create(L"chaldea_chronicle", origin, size)) {
     return EXIT_FAILURE;

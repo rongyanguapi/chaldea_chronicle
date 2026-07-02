@@ -1,7 +1,7 @@
 import Cocoa
 import FlutterMacOS
 
-private let storyWindowContentSize = NSSize(width: 768, height: 470)
+private let storyWindowContentSize = NSSize(width: 640, height: 360)
 
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {

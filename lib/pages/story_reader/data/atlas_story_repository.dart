@@ -21,7 +21,7 @@ class AtlasStoryRepository implements StoryChapterRepository {
 
   final http.Client _client;
   final bool _ownsClient;
-  Map<String, Uri>? _bgmUrlsByFileName;
+  Map<String, StoryResource>? _bgmResourcesByFileName;
 
   @override
   Future<StoryChapter> loadChapter(String scriptId) async {
@@ -42,16 +42,21 @@ class AtlasStoryRepository implements StoryChapterRepository {
       final scriptFuture = _client.get(Uri.parse(scriptUrl));
       final bgmCatalogFuture = _loadBgmCatalog();
       final scriptResponse = await scriptFuture;
-      final bgmUrlsByFileName = await bgmCatalogFuture;
+      final bgmResourcesByFileName = await bgmCatalogFuture;
       _ensureSuccess(scriptResponse, '剧情脚本');
+      final scriptText = utf8.decode(scriptResponse.bodyBytes);
+      final faceLayoutsByCharacterId = await _loadFaceLayouts(
+        AtlasScriptParser.scanCharacterIds(scriptText),
+      );
 
       return AtlasScriptParser(
-        bgmUrlsByFileName: bgmUrlsByFileName,
+        bgmResourcesByFileName: bgmResourcesByFileName,
+        faceLayoutsByCharacterId: faceLayoutsByCharacterId,
       ).parse(
         scriptId: scriptId,
         title: _resolveTitle(metadata, scriptId),
         source: _source,
-        scriptText: utf8.decode(scriptResponse.bodyBytes),
+        scriptText: scriptText,
       );
     } on StoryRepositoryException {
       rethrow;
@@ -67,8 +72,8 @@ class AtlasStoryRepository implements StoryChapterRepository {
     }
   }
 
-  Future<Map<String, Uri>> _loadBgmCatalog() async {
-    final cachedCatalog = _bgmUrlsByFileName;
+  Future<Map<String, StoryResource>> _loadBgmCatalog() async {
+    final cachedCatalog = _bgmResourcesByFileName;
     if (cachedCatalog != null) {
       return cachedCatalog;
     }
@@ -80,7 +85,7 @@ class AtlasStoryRepository implements StoryChapterRepository {
       throw const StoryRepositoryException('BGM 目录格式无效');
     }
 
-    final result = <String, Uri>{};
+    final result = <String, StoryResource>{};
     for (final item in decoded) {
       if (item is! Map<String, dynamic>) {
         continue;
@@ -90,11 +95,60 @@ class AtlasStoryRepository implements StoryChapterRepository {
       if (fileName == null || audioAsset == null) {
         continue;
       }
-      result[fileName] = Uri.parse(audioAsset);
+      result[fileName] = _resourceFromUrl(
+        audioAsset,
+        fallbackFileName: '$fileName.mp3',
+      );
     }
 
-    _bgmUrlsByFileName = Map<String, Uri>.unmodifiable(result);
-    return _bgmUrlsByFileName!;
+    _bgmResourcesByFileName = Map<String, StoryResource>.unmodifiable(result);
+    return _bgmResourcesByFileName!;
+  }
+
+  Future<Map<String, StoryCharacterFaceLayout>> _loadFaceLayouts(
+    Iterable<String> characterIds,
+  ) async {
+    final ids = characterIds.toSet().toList(growable: false);
+    if (ids.isEmpty) {
+      return const <String, StoryCharacterFaceLayout>{};
+    }
+
+    try {
+      final response = await _client.get(
+        Uri(
+          scheme: 'https',
+          host: 'api.atlasacademy.io',
+          path: '/raw/CN/svtScript',
+          query: ids
+              .map((id) => 'charaId=${Uri.encodeQueryComponent(id)}')
+              .join('&'),
+        ),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return const <String, StoryCharacterFaceLayout>{};
+      }
+
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      if (decoded is! List) {
+        return const <String, StoryCharacterFaceLayout>{};
+      }
+
+      final result = <String, StoryCharacterFaceLayout>{};
+      for (final item in decoded) {
+        if (item is! Map<String, dynamic>) {
+          continue;
+        }
+        final id = _idOrNull(item['id']);
+        final layout = _faceLayoutOrNull(item);
+        if (id != null && layout != null) {
+          result.putIfAbsent(id, () => layout);
+        }
+      }
+      return Map<String, StoryCharacterFaceLayout>.unmodifiable(result);
+    } catch (_) {
+      // svtScript 只提供表情覆盖增强数据，请求失败时保留基础立绘阅读流程。
+      return const <String, StoryCharacterFaceLayout>{};
+    }
   }
 
   static Map<String, dynamic> _decodeJsonObject(List<int> bytes) {
@@ -135,4 +189,110 @@ class AtlasStoryRepository implements StoryChapterRepository {
     }
     return value;
   }
+
+  static String? _idOrNull(Object? value) {
+    if (value is int) {
+      return value.toString();
+    }
+    if (value is String && value.isNotEmpty) {
+      return value;
+    }
+    return null;
+  }
+
+  static StoryCharacterFaceLayout? _faceLayoutOrNull(
+    Map<String, dynamic> item,
+  ) {
+    final faceX = _doubleOrNull(item['faceX']);
+    final faceY = _doubleOrNull(item['faceY']);
+    if (faceX == null || faceY == null) {
+      return null;
+    }
+
+    final faceSize = _faceSizeOrDefault(item['extendData']);
+    return StoryCharacterFaceLayout(
+      faceX: faceX,
+      faceY: faceY,
+      offsetX: _doubleOrNull(item['offsetX']) ?? 0,
+      offsetY: _doubleOrNull(item['offsetY']) ?? 0,
+      faceSizeWidth: faceSize.width,
+      faceSizeHeight: faceSize.height,
+    );
+  }
+
+  static _FaceSize _faceSizeOrDefault(Object? extendData) {
+    const fallback = _FaceSize(width: 256, height: 256);
+    if (extendData is! Map<String, dynamic>) {
+      return fallback;
+    }
+
+    final faceSize = extendData['faceSize'];
+    if (faceSize is num) {
+      final size = faceSize.toDouble();
+      return _FaceSize(width: size, height: size);
+    }
+    final parsedFaceSize = _sizeFromObject(faceSize);
+    if (parsedFaceSize != null) {
+      return parsedFaceSize;
+    }
+
+    final faceSizeRect = _sizeFromObject(extendData['faceSizeRect']);
+    return faceSizeRect ?? fallback;
+  }
+
+  static _FaceSize? _sizeFromObject(Object? value) {
+    if (value is List && value.length >= 2) {
+      final widthIndex = value.length >= 4 ? 2 : 0;
+      final heightIndex = value.length >= 4 ? 3 : 1;
+      final width = _doubleOrNull(value[widthIndex]);
+      final height = _doubleOrNull(value[heightIndex]);
+      if (width != null && height != null) {
+        return _FaceSize(width: width, height: height);
+      }
+    }
+
+    if (value is Map<String, dynamic>) {
+      final width = _doubleOrNull(value['width']) ?? _doubleOrNull(value['w']);
+      final height =
+          _doubleOrNull(value['height']) ?? _doubleOrNull(value['h']);
+      if (width != null && height != null) {
+        return _FaceSize(width: width, height: height);
+      }
+    }
+    return null;
+  }
+
+  static double? _doubleOrNull(Object? value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value);
+    }
+    return null;
+  }
+
+  static StoryResource _resourceFromUrl(
+    String value, {
+    required String fallbackFileName,
+  }) {
+    final url = Uri.parse(value);
+    final fileName = url.pathSegments.isEmpty
+        ? fallbackFileName
+        : url.pathSegments.last.trim();
+    return StoryResource(
+      url: url,
+      cacheFileName: fileName.isEmpty ? fallbackFileName : fileName,
+    );
+  }
+}
+
+class _FaceSize {
+  const _FaceSize({
+    required this.width,
+    required this.height,
+  });
+
+  final double width;
+  final double height;
 }
